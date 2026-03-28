@@ -29,7 +29,8 @@
             <ul class="menu-list">
               <li><a href="#createProject">プロジェクトの作成</a></li>
               <li><a href="#dllmain">dllmain.cppのセットアップ</a></li>
-              <li><a href="#gamehook">ゲーム関数のフック</a></li>
+              <li><a href="#gameHook">ゲーム関数のフック</a></li>
+              <li><a href="#clientInstance">ClientInstanceの取得</a></li>
             </ul>
             <p class="menu-label">番外編</p>
             <ul class="menu-list">
@@ -69,7 +70,7 @@
             <p>dllmain.cppは、アドレス（シグネチャやオフセット）や機能（フックやモジュール）の初期化・解放など、クライアントの基本処理のすべてを司る重要なファイルの1つです。初期状態では、pch.hのインクルードに加え、<code>DllMain</code>関数が用意されています。</p>
             <p>アドレスや機能の初期化は、初期化用のスレッド関数にて行います。ここでは<code>DWORD InitializeClient(HMODULE hModule)</code>を初期化スレッドとして定義します。</p>
             <p>また、Irisクライアントではプリコンパイル済みヘッダ（pch）を使用しないため、pch.hの代わりに、まずWindows.hをインクルードしてください。以上を踏まえたdllmain.cppのコード例を以下に提示します。</p>
-            <pre><code class="language-cpp">
+            <pre><code>
             #include &lt;windows.h&gt;
 
             DWORD InitializeClient(HMODULE hModule) {
@@ -86,13 +87,13 @@
             </code></pre>
             <hr>
 
-            <div style="height: 200px;"></div> <h1 id="gamehook" class="title">ゲーム関数のフック</h1>
+            <div style="height: 200px;"></div> <h1 id="gameHook" class="title">ゲーム関数のフック</h1>
             <p>ここからは、ゲーム内の関数をフックする方法を解説します。ここでは<strong>safetyhook</strong>と<strong>libhat</strong>を使用します。また、今回はKeymapを例にフックします。</p>
             <p>Keymapは、関数<code>void Keyboard::_feed(Keyboard* this, __int32 key, bool held)</code>のことを指し、ホットキーの指定に使用されます。</p>
             <p>まずは<code>Keyboard::_feed</code>のシグネチャを取得します。取得方法はYouTubeに投稿されているものなどを参考にしてください。（<a href="https://www.youtube.com/watch?v=jIZnWKZwjVc">https://www.youtube.com/watch?v=jIZnWKZwjVc</a>）</p>
             <p>26.10現在でのシグネチャは<code>4C 8B DC 48 81 EC ? ? ? ? 81 FA</code>です。これをアドレスとしてフックします。</p>
             <p>まず、このシグネチャをスキャンする関数を用意します。dllmain.cppとは別のファイルに用意することを推奨します。以下に、libhatを用いた例を提示します。</p>
-            <pre><code class="language-cpp">
+            <pre><code>
             static hat::scan_result scanSig(std::string_view sig) {
             	auto parsed_sig = hat::parse_signature(sig);
             	const auto result = hat::find_pattern(parsed_sig.value(), ".text");
@@ -100,7 +101,7 @@
             }
             </code></pre>
             <p>次に、フックを管理するファイルを作成します。以下にコード例を提示します。</p>
-            <pre><code class="language-cpp">
+            <pre><code>
             #pragma once
 
             class FuncHook {
@@ -120,9 +121,9 @@
               }
             }
             </code></pre>
-            <p>この時点ではKeymap.hとその中身を作成していないためエラーが出ていますが、後に解消されます。</p>
+            <p>この時点ではKeymap.hとその中身を作成していないためエラーが出ていますが、後に解消されます。</p>  
             <p>次に、Keymapをフックするファイルを作成します。フックを管理するファイルと同じディレクトリにHooksというフォルダを作成し、その中にフックするファイルを作成することを推奨します。以下にコード例を提示します。</p>
-            <pre><code class="language-cpp">
+            <pre><code>
             #pragma once
 
             safetyhook::InlineHook oKey;
@@ -145,7 +146,7 @@
               }
             }
             </code></pre>
-            フックの仕組みは完成したので、dllmain.cppの<code>DWORD InitializeClient(HMODULE hModule)</code>関数内にフックを初期化する処理を加えます。以下にコード例を提示します。
+            <p>フックの仕組みは完成したので、dllmain.cppの<code>DWORD InitializeClient(HMODULE hModule)</code>関数内にフックを初期化する処理を加えます。以下にコード例を提示します。</p>
             <pre><code>
             DWORD InitializeClient(HMODULE hModule) {
               InitializeHooks();
@@ -153,7 +154,74 @@
               return 0;
             }
             </code></pre>
-            以上で、Keymapのフックが完成されました。
+            <p>以上で、Keymapのフックが完成されました。</p>
+            <hr>
+
+            <div style="height: 200px"></div> <h1 id="clientInstance" class="title">ClientInstanceの取得</h1>
+            <p><strong>ClientInstance</strong>は、<code>getLocalPlayer()</code>や<code>getMinecraftGame()</code>など、ゲームを改造する上で必須となるような関数を多く持っています。</p>
+            <p>今回は、<code>ScreenView::setupAndRender(ScreenView*, MinecraftUIRenderContext*)</code>という関数をフックして取得します。（フックの手順はKeymapと殆ど同じなので省略します。）</p>
+            <p>まず、新たにSDK（Software Development Kit = ソフトウェア開発キット）用のフォルダを作成し、その中に<strong>ClientInstance.h</strong>と<strong>MinecraftUIRenderContext.h</strong>を作成します。</p>
+            <p>次に、ClientInstance.hの中身を記述します。今は一旦、<code>ClientInstance</code>クラスのみを定義します。以下のように記述してください。</p>
+            <pre><code>
+            #pragma once
+
+            class ClientInstance {
+            public:
+            };
+            </code></pre>
+            <p>
+              MinecraftUIRenderContext.hの中身を記述します。まず、<code>MinecraftUIRenderContext</code>クラスを定義します。
+              次に、<code>MinecraftUIRenderContext::mClient</code>という変数のオフセットを取得します。
+              取得方法は省略しますが、26.10現在までオフセットは<code>0x8</code>で固定されています。（※勿論、今後のアップデートで変更される可能性があります。）
+            </p>
+            <p>取得したオフセットにアクセスし、ClientInstanceを読むコードを記述します。今回はマクロを使用します。以下のようなマクロを定義してください。</p>
+            <pre><code>
+            #define AS_FIELD(type, name, fn) __declspec(property(get = fn, put = set##name)) type name
+
+            #define BUILD_ACCESS(ptr, type, name, offset) \
+            AS_FIELD(type, name, get##name); \
+            type get##name() const { return *reinterpret_cast<type*>((uintptr_t)ptr + offset); } \
+            void set##name(type v) const { *reinterpret_cast<type*>((uintptr_t)ptr + offset) = std::move(v); }
+            </code></pre>
+            <p>最終的に、MinecraftUIRenderContext.hの中身は以下のようになります。</p>
+            <pre><code>
+            #pragma once
+
+            class MinecraftUIRenderContext {
+            public:
+              BUILD_ACCESS(this, ClientInstance*, mClient, 0x8);
+            };
+            </code></pre>
+            <p>
+              次に、<code>mClient</code>を格納する用のポインタを用意します。
+              今回は、Globals.hというファイルを作成し、その中に定義します。
+              以下のように記述してください。</p>
+            <pre><code>
+            #pragma once
+
+            class Globals {
+            public:
+              class ClientInstance* ClientInstance;
+            };
+            </code></pre>
+            <p><code>ScreenView::setupAndRender</code>関数をフックするファイルに、Detour関数を次のように記述します。</p>
+            <pre><code>
+            safetyhook::InlineHook oRender;
+
+            void RenderDetour(void* _this, MinecraftUIRenderContext* ctx) {
+              Globals::ClientInstance = ctx->mClient;
+
+              auto& hook = oRender;
+              hook.call<void>(_this, ctx);
+            }
+            </code></pre>
+            <p>最後にこのDetour関数と<code>ScreenView::setupAndRender</code>関数のシグネチャをもってフックします。例によってシグネチャの取得方法とフック方法は省略します。</p>
+            <p>26.10現在のシグネチャは<code>48 89 5C 24 ? 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 ? ? ? ? 48 81 EC ? ? ? ? 0F 29 BC 24 ? ? ? ? 48 8B 05 ? ? ? ? 48 33 C4 48 89 85 ? ? ? ? 4C 8B FA</code>です。</p>
+            <p>これで、ClientInstanceを取得することができました。使用例は以下のようになります。</p>
+            <pre><code>
+            Globals::ClientInstance->getLocalPlayer();
+            Globals::ClientInstance->getMinecraftGame();
+            </code></pre>
             <hr>
 
             <div style="height: 200px;"></div> <h1 id="variable-function" class="title">変数・関数</h1>
