@@ -201,7 +201,7 @@
 
             class Globals {
             public:
-              class ClientInstance* ClientInstance;
+              static class ClientInstance* ClientInstance;
             };
             </code></pre>
             <p><code>ScreenView::setupAndRender</code>関数をフックするファイルに、Detour関数を次のように記述します。</p>
