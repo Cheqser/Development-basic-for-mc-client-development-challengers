@@ -39,6 +39,7 @@
               <li><a href="#declaration-definition">宣言・定義</a></li>
               <li><a href="#structures">構造体</a></li>
               <li><a href="#const">定数</a></li>
+              <li><a href="#if-else">if文・else文</a></li>
               <li><a href="#forbeautifulcode">コードを綺麗に書くために</a></li>
             </ul>
           </div>
@@ -121,7 +122,7 @@
               }
             }
             </code></pre>
-            <p>この時点ではKeymap.hとその中身を作成していないためエラーが出ていますが、後に解消されます。</p>  
+            <p>この時点ではKeymap.hとその中身を作成していないためエラーが出ていますが、後に解消されます。</p>
             <p>次に、Keymapをフックするファイルを作成します。フックを管理するファイルと同じディレクトリにHooksというフォルダを作成し、その中にフックするファイルを作成することを推奨します。以下にコード例を提示します。</p>
             <pre><code>
             #pragma once
@@ -314,6 +315,48 @@
             constexpr int var2 = 500;
             </code></pre>
             上で記述したように、<code>constexpr</code>はコンパイル時に値が確定するため、必然的に計算の回数が減り、パフォーマンスの向上に繋がります。
+            <hr>
+
+            <div style="height: 200px"></div> <h1 id="if-else" class="title">if文・else文</h1>
+            <p>「Aの時、Bを処理したい」「Aじゃないとき、Cを処理したい」といったことは、<strong>if文</strong>を使用することで実現できます。</p>
+            <p>例えば、「もしプレイヤーが空ならば、returnしたい」なら、次のようになります。</p>
+            <pre><code>
+            auto player = Globals::ClientInstance->getLocalPlayer();
+            if (!player) return;
+            </code></pre>
+            <p>ここの<code>if (!player)</code>は、<code>if (player ==nullptr)</code>と同じ意味の条件です。</p>
+            <p>
+            上はreturn処理など、一つの処理のみを行っている場合ですが、複数の処理を行う時は<strong>{}（ブロック）</strong>を使う必要があります。
+            例えば、「もしプレイヤーが空ならば、bool変数dummyを偽にしてreturnしたい」という場合は、次のようになります。
+            </p>
+            <pre><code>
+            auto player = Globals::ClientInstance->getLocalPlayer();
+            if (!player) {
+              dummy = false;
+              return;
+            }
+            </code></pre>
+            <p>では、<strong>そうでない場合</strong>はどう表現するのでしょうか。その場合は、<strong>else文</strong>を使用します。</p>
+            <p>if文と同様、複数の処理を行う場合はブロックを使用する必要があります。また、elseはifとくっ付けることができます。</p>
+            <pre><code>
+            auto player = Globals::ClientInstance->getLocalPlayer();
+            if (player) {
+              dummy = true;
+            }
+            else {
+              dummy = false;
+              return;
+            }
+            </code></pre>
+            <pre><code>
+            int number = rand();
+            if (number > 50) {
+              std::cout << "A variable [number] is bigger than 50.\n";
+            }
+            else if (number < 50) {
+              std::cout << "A variable [number] is smaller than 50.\n";
+            }
+            </code></pre>
             <hr>
 
             <div style="height: 200px"></div> <h1 id="forbeautifulcode" class="title">コードを綺麗に書くために</h1>
